@@ -1,0 +1,3 @@
+mpi4py
+# Optional but recommended for numerical arrays: numpy
+numpy
