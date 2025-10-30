@@ -4,6 +4,20 @@
 #include <stdbool.h>
 #include <mpi.h>
 
+/* -----------------------------------------------------------------------------
+ * Programa: SymmetricMatrix&MPI
+ * -----------------------------
+ * Este programa genera una matriz cuadrada binaria (0 y 1), calcula su 
+ * transpuesta y verifica si la matriz es simétrica usando MPI para paralelizar
+ * la verificación de filas entre los procesos.
+ *
+ * Funciones:
+ *  - printMatrix: imprime cualquier matriz n x m
+ *  - isSymmetricPartial: verifica simetría solo para un rango de filas
+ * -----------------------------------------------------------------------------
+ */
+
+// Función para imprimir una matriz n x m
 void printMatrix(int n, int m, int matrix[n][m]) {
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < m; j++) {
@@ -13,21 +27,22 @@ void printMatrix(int n, int m, int matrix[n][m]) {
     }
 }
 
-
+// Función que verifica simetría solo para un rango de filas [start_row, end_row)
 bool isSymmetricPartial(int n, int start_row, int end_row, int matrix[n][n], int transpose[n][n]) {
     for (int i = start_row; i < end_row; i++) {
         for (int j = 0; j < n; j++) {
             if (matrix[i][j] != transpose[i][j]) {
-                return false;
+                return false; // alguna fila no coincide, no es simétrica
             }
         }
     }
-    return true;
+    return true; // todas las filas del rango coinciden
 }
-
 
 int main(int argc, char** argv) {
     int rank, size;
+
+    // Inicialización de MPI
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -35,23 +50,25 @@ int main(int argc, char** argv) {
     srand(time(NULL) + rank); // semilla diferente por proceso
 
     int n, m;
-    int *matrix_data = NULL;
-    int *transpose_data = NULL;
+    int *matrix_data = NULL;     // solo lo tiene el proceso 0
+    int *transpose_data = NULL;  // solo lo tiene el proceso 0
 
     if (rank == 0) {
         printf("--------- SymmetricMatrix&MPI --------\n");
 
+        // Lectura de dimensiones
         printf("Ingrese la cantidad de filas de la matriz: ");
         scanf("%d", &n);
         printf("Ingrese la cantidad de columnas de la matriz: ");
         scanf("%d", &m);
 
+        // Solo matrices cuadradas pueden ser simétricas
         if (n != m) {
-            printf("\n La matriz no es cuadrada, por lo tanto no puede ser simétrica.\n");
+            printf("\nLa matriz no es cuadrada, por lo tanto no puede ser simétrica.\n");
             MPI_Abort(MPI_COMM_WORLD, 1);
         }
 
-        // Crear la matriz original
+        // Reservar memoria y llenar matriz original
         matrix_data = malloc(n * m * sizeof(int));
         transpose_data = malloc(n * m * sizeof(int));
 
@@ -65,17 +82,15 @@ int main(int argc, char** argv) {
         }
 
         // Calcular la transpuesta
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < m; j++) {
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < m; j++)
                 transpose_data[j * m + i] = matrix_data[i * m + j];
-            }
-        }
 
         printf("\nLa matriz transpuesta es:\n");
         printMatrix(n, m, (int (*)[m])transpose_data);
     }
 
-    // Enviar dimensiones a todos los procesos
+    // Compartir dimensiones con todos los procesos
     MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&m, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -83,15 +98,15 @@ int main(int argc, char** argv) {
     int *matrix = malloc(n * m * sizeof(int));
     int *transpose = malloc(n * m * sizeof(int));
 
-    // Enviar matriz original y transpuesta a todos
+    // Enviar matrices a todos los procesos
     MPI_Bcast(matrix_data ? matrix_data : matrix, n * m, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(transpose_data ? transpose_data : transpose, n * m, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // Si no es proceso 0, copiar los datos
+    // Copiar datos si no es el proceso 0
     if (rank != 0) {
         for (int i = 0; i < n * m; i++) {
-            matrix[i] = matrix_data ? matrix_data[i] : matrix[i];
-            transpose[i] = transpose_data ? transpose_data[i] : transpose[i];
+            matrix[i] = matrix[i];
+            transpose[i] = transpose[i];
         }
     } else {
         for (int i = 0; i < n * m; i++) {
@@ -115,12 +130,12 @@ int main(int argc, char** argv) {
     int local_result = local_symmetric ? 1 : 0;
     int global_result;
 
-    // Combinar resultados: si alguno falla (0), el resultado final será 0
+    // Reducir resultados: si algún proceso falla, el resultado global será 0
     MPI_Reduce(&local_result, &global_result, 1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
 
     double end_time = MPI_Wtime();
 
-    // Proceso maestro imprime resultado final
+    // Proceso maestro imprime el resultado final
     if (rank == 0) {
         printf("\nResultado final:\n");
         if (global_result == 1)
@@ -132,6 +147,7 @@ int main(int argc, char** argv) {
         printf("---------- Program End ----------\n");
     }
 
+    // Liberar memoria
     free(matrix);
     free(transpose);
     if (rank == 0) {

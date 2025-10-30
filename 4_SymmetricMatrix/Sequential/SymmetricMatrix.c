@@ -3,6 +3,18 @@
 #include <time.h>
 #include <stdbool.h>
 
+/* -----------------------------------------------------------------------------
+ * Programa: SymmetricMatrix&Sequential
+ * --------------------------
+ * Este programa genera una matriz aleatoria binaria (0 y 1), la imprime, 
+ * calcula su transpuesta y verifica si la matriz es simétrica (solo si es cuadrada).
+ * 
+ * Funciones:
+ *  - printMatrix: imprime una matriz n x m en consola
+ *  - compareMatrices: compara dos matrices n x m y retorna true si son iguales
+ * -----------------------------------------------------------------------------
+ */
+
 // Función para imprimir una matriz
 void printMatrix(int n, int m, int matrix[n][m]) {
     for (int i = 0; i < n; i++) {
@@ -27,7 +39,7 @@ bool compareMatrices(int n, int m, int A[n][m], int B[n][m]) {
 int main() {
     srand(time(NULL));
 
-    int n, m;
+    int n, m; // filas y columnas
 
     printf("--------- SymmetricMatrix&Sequential --------\n");
 
@@ -37,15 +49,17 @@ int main() {
     printf("Ingrese la cantidad de columnas de la matriz: ");
     scanf("%d", &m);
 
+    // Crear matriz n x m
     int matrix[n][m];
 
-    printf("\nLa matriz generada al azar es:\n");
+    // Llenar matriz con valores aleatorios 0 o 1
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < m; j++) {
-            matrix[i][j] = rand() % 2; // matriz binaria (0 o 1)
+            matrix[i][j] = rand() % 2; 
         }
     }
 
+    printf("\nLa matriz generada al azar es:\n");
     printMatrix(n, m, matrix);
 
     clock_t start = clock();
@@ -53,7 +67,7 @@ int main() {
     if (n == m) { // solo tiene sentido si es cuadrada
         int transpose[n][m];
 
-        // Transponer la matriz
+        // Calcular la transpuesta
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < m; j++) {
                 transpose[j][i] = matrix[i][j];
@@ -63,7 +77,7 @@ int main() {
         printf("\nLa matriz transpuesta es:\n");
         printMatrix(n, m, transpose);
 
-        // Comparar original con su transpuesta
+        // Verificar si la matriz es simétrica
         if (compareMatrices(n, m, matrix, transpose)) {
             printf("\nLa matriz es simétrica.\n");
         } else {
@@ -76,6 +90,7 @@ int main() {
 
     clock_t end = clock();
 
+    // Mostrar tiempo de ejecución
     printf("\nTiempo total de ejecución: %.6f segundos\n",
            (double)(end - start) / CLOCKS_PER_SEC);
 
